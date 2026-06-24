@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { CreditCard, Banknote, Smartphone, CheckCircle, AlertCircle, Crown, Sword } from 'lucide-react';
+import { CreditCard, Banknote, Smartphone, CheckCircle, AlertCircle, Crown, Sword, RefreshCw } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Header from '../components/Header';
 
 export default function BayarTagihan() {
-  const { user, getTagihanUser, bayarTagihan } = useApp();
-  const myTagihan = getTagihanUser(user.id);
+  const { user, getTagihanUser, tagihan, loading, fetchData, bayarTagihan } = useApp();
+  const myTagihan = getTagihanUser(user?.id);
   const tagihanBelumBayar = myTagihan.filter(t => t.status === 'belum_bayar' || t.status === 'terlambat');
   const [selectedTagihan, setSelectedTagihan] = useState(null);
   const [metodeBayar, setMetodeBayar] = useState('');
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [processing, setProcessing] = useState(false);
 
   const formatCurrency = (num) => {
     return new Intl.NumberFormat('id-ID', {
@@ -34,23 +35,32 @@ export default function BayarTagihan() {
     return (
       <span
         className="px-2 py-1 rounded-full text-xs font-medium"
-        style={{ backgroundColor: styles[status].bg, color: styles[status].color, border: styles[status].border }}
+        style={{ backgroundColor: styles[status]?.bg, color: styles[status]?.color, border: styles[status]?.border }}
       >
-        {labels[status]}
+        {labels[status] || status}
       </span>
     );
   };
 
-  const handleBayar = () => {
+  const handleBayar = async () => {
     if (selectedTagihan && metodeBayar) {
+      setProcessing(true);
       setShowConfirmation(false);
       setShowSuccess(true);
-      setTimeout(() => {
-        bayarTagihan(selectedTagihan.id, metodeBayar);
+
+      const result = await bayarTagihan(selectedTagihan.id, metodeBayar);
+
+      if (result.success) {
+        setTimeout(() => {
+          setShowSuccess(false);
+          setSelectedTagihan(null);
+          setMetodeBayar('');
+        }, 2000);
+      } else {
         setShowSuccess(false);
-        setSelectedTagihan(null);
-        setMetodeBayar('');
-      }, 2000);
+        alert('Gagal bayar: ' + result.error);
+      }
+      setProcessing(false);
     }
   };
 
@@ -61,6 +71,20 @@ export default function BayarTagihan() {
     { id: 'E-Wallet', label: 'E-Wallet', icon: Smartphone, desc: 'GoPay, OVO, Dana' },
     { id: 'Tunai', label: 'Bayar Tunai', icon: CreditCard, desc: 'Bayar langsung ke Bendahara' },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex flex-col">
+        <Header title="Bayar Tagihan" />
+        <div className="flex-1 p-4 lg:p-8 flex items-center justify-center" style={{ background: '#1A0F0A', minHeight: '100%' }}>
+          <div className="text-center">
+            <RefreshCw size={48} className="animate-spin mx-auto mb-4" style={{ color: '#DAA520' }} />
+            <p style={{ color: '#DAA520' }}>Memuat tagihan...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col">
@@ -232,13 +256,15 @@ export default function BayarTagihan() {
                 </div>
                 <button
                   onClick={() => setShowConfirmation(true)}
+                  disabled={processing}
                   className="w-full mt-6 py-4 font-semibold rounded-xl transition-all"
                   style={{
                     background: 'linear-gradient(90deg, #8B0000 0%, #5C0000 100%)',
                     border: '2px solid #DAA520',
                     color: '#DAA520',
                     fontFamily: 'Cinzel, serif',
-                    boxShadow: '0 0 20px rgba(218, 165, 32, 0.2)'
+                    boxShadow: '0 0 20px rgba(218, 165, 32, 0.2)',
+                    opacity: processing ? 0.6 : 1
                   }}
                 >
                   ⚔ Bayar Sekarang

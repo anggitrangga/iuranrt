@@ -1,19 +1,18 @@
-import { Users, Receipt, DollarSign, AlertCircle, TrendingUp, TrendingDown, Clock, Crown, Sword } from 'lucide-react';
+import { Users, Receipt, DollarSign, AlertCircle, TrendingUp, TrendingDown, Clock, Crown, Sword, RefreshCw } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Header from '../components/Header';
 import { Link } from 'react-router-dom';
 
 export default function Dashboard() {
-  const { user, getStatistikRealtime, getTagihanUser, tagihan } = useApp();
+  const { user, getStatistikRealtime, getTagihanUser, tagihan, loading, fetchData } = useApp();
   const stats = getStatistikRealtime();
-  const myTagihan = getTagihanUser(user.id);
+  const myTagihan = getTagihanUser(user?.id);
   const tagihanBelumBayar = myTagihan.filter(t => t.status === 'belum_bayar' || t.status === 'terlambat');
   const totalBelumBayar = tagihanBelumBayar.reduce((sum, t) => sum + t.jumlah, 0);
 
-  // Recent transactions (last 5)
+  // Recent transactions (last 5 lunas)
   const recentTransactions = [...tagihan]
     .filter(t => t.status === 'lunas')
-    .sort((a, b) => new Date(b.tanggalBayar) - new Date(a.tanggalBayar))
     .slice(0, 5);
 
   const statCards = [
@@ -73,12 +72,26 @@ export default function Dashboard() {
     return (
       <span
         className="px-2 py-1 rounded-full text-xs font-medium"
-        style={{ backgroundColor: styles[status].bg, color: styles[status].color, border: styles[status].border }}
+        style={{ backgroundColor: styles[status]?.bg, color: styles[status]?.color, border: styles[status]?.border }}
       >
-        {labels[status]}
+        {labels[status] || status}
       </span>
     );
   };
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex flex-col">
+        <Header title="Dashboard" />
+        <div className="flex-1 p-4 lg:p-8 flex items-center justify-center" style={{ background: '#1A0F0A', minHeight: '100%' }}>
+          <div className="text-center">
+            <RefreshCw size={48} className="animate-spin mx-auto mb-4" style={{ color: '#DAA520' }} />
+            <p style={{ color: '#DAA520' }}>Memuat data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col">
@@ -109,7 +122,7 @@ export default function Dashboard() {
               className="text-2xl font-bold mb-2"
               style={{ fontFamily: 'Cinzel, serif', color: '#F5DEB3' }}
             >
-              Namaste, {user.nama}!
+              Namaste, {user?.nama || 'User'}!
             </h3>
             <p style={{ color: '#F5DEB3', opacity: 0.8 }}>
               Kelola kas RT dengan kehormatan dan keadilan
@@ -365,7 +378,7 @@ export default function Dashboard() {
                     <td className="py-3 px-2 text-sm" style={{ color: '#F5DEB3', opacity: 0.7 }}>{t.jenis}</td>
                     <td className="py-3 px-2 text-sm font-medium" style={{ color: '#4ADE80' }}>{formatCurrency(t.jumlah)}</td>
                     <td className="py-3 px-2 text-sm" style={{ color: '#F5DEB3', opacity: 0.7 }}>
-                      {new Date(t.tanggalBayar).toLocaleDateString('id-ID')}
+                      {t.tanggalBayar ? new Date(t.tanggalBayar).toLocaleDateString('id-ID') : '-'}
                     </td>
                     <td className="py-3 px-2">{getStatusBadge(t.status)}</td>
                   </tr>

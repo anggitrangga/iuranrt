@@ -1,19 +1,19 @@
 import { useState } from 'react';
-import { Search, User, Phone, MapPin, Calendar, Crown, Scroll } from 'lucide-react';
+import { Search, Crown, Scroll, RefreshCw } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Header from '../components/Header';
 
 export default function DaftarWarga() {
-  const { warga } = useApp();
+  const { warga, loading } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('semua');
   const [selectedWarga, setSelectedWarga] = useState(null);
 
   // Filter warga
   const filteredWarga = warga.filter(w => {
-    const matchesSearch = w.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      w.alamat.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      w.nik.includes(searchTerm);
+    const matchesSearch = w.nama?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      w.alamat?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      w.nik?.includes(searchTerm);
     const matchesStatus = statusFilter === 'semua' || w.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -32,6 +32,20 @@ export default function DaftarWarga() {
     aktif: warga.filter(w => w.status === 'aktif').length,
     nonAktif: warga.filter(w => w.status === 'non-aktif').length,
   };
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex flex-col">
+        <Header title="Daftar Warga" />
+        <div className="flex-1 p-4 lg:p-8 flex items-center justify-center" style={{ background: '#1A0F0A', minHeight: '100%' }}>
+          <div className="text-center">
+            <RefreshCw size={48} className="animate-spin mx-auto mb-4" style={{ color: '#DAA520' }} />
+            <p style={{ color: '#DAA520' }}>Memuat warga...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col">
@@ -143,12 +157,12 @@ export default function DaftarWarga() {
                   <h4 className="font-semibold truncate" style={{ fontFamily: 'Cinzel, serif', color: '#F5DEB3' }}>{w.nama}</h4>
                   <div className="mt-2 space-y-1">
                     <div className="flex items-center gap-2 text-sm" style={{ color: '#F5DEB3', opacity: 0.6 }}>
-                      <MapPin size={14} style={{ color: '#DAA520' }} />
+                      <span style={{ color: '#DAA520' }}>📍</span>
                       <span className="truncate">{w.alamat}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm" style={{ color: '#F5DEB3', opacity: 0.6 }}>
-                      <Phone size={14} style={{ color: '#DAA520' }} />
-                      <span>{w.telepon}</span>
+                      <span style={{ color: '#DAA520' }}>📞</span>
+                      <span>{w.telepon || '-'}</span>
                     </div>
                   </div>
                 </div>
@@ -233,7 +247,7 @@ export default function DaftarWarga() {
                 className="flex items-center gap-3 p-3 rounded-lg"
                 style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
               >
-                <MapPin size={20} style={{ color: '#DAA520' }} />
+                <span style={{ color: '#DAA520' }}>📍</span>
                 <div>
                   <p className="text-xs" style={{ color: '#F5DEB3', opacity: 0.6 }}>Alamat</p>
                   <p className="font-medium" style={{ color: '#F5DEB3' }}>{selectedWarga.alamat}</p>
@@ -243,7 +257,7 @@ export default function DaftarWarga() {
                 className="flex items-center gap-3 p-3 rounded-lg"
                 style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
               >
-                <User size={20} style={{ color: '#DAA520' }} />
+                <span style={{ color: '#DAA520' }}>🪪</span>
                 <div>
                   <p className="text-xs" style={{ color: '#F5DEB3', opacity: 0.6 }}>NIK</p>
                   <p className="font-medium" style={{ color: '#F5DEB3' }}>{selectedWarga.nik}</p>
@@ -253,30 +267,21 @@ export default function DaftarWarga() {
                 className="flex items-center gap-3 p-3 rounded-lg"
                 style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
               >
-                <Phone size={20} style={{ color: '#DAA520' }} />
+                <span style={{ color: '#DAA520' }}>📞</span>
                 <div>
                   <p className="text-xs" style={{ color: '#F5DEB3', opacity: 0.6 }}>Telepon</p>
-                  <p className="font-medium" style={{ color: '#F5DEB3' }}>{selectedWarga.telepon}</p>
+                  <p className="font-medium" style={{ color: '#F5DEB3' }}>{selectedWarga.telepon || '-'}</p>
                 </div>
               </div>
               <div
                 className="flex items-center gap-3 p-3 rounded-lg"
                 style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
               >
-                <Calendar size={20} style={{ color: '#DAA520' }} />
+                <span style={{ color: '#DAA520' }}>📅</span>
                 <div>
                   <p className="text-xs" style={{ color: '#F5DEB3', opacity: 0.6 }}>Tanggal Masuk</p>
                   <p className="font-medium" style={{ color: '#F5DEB3' }}>{formatDate(selectedWarga.tanggalMasuk)}</p>
                 </div>
-              </div>
-
-              {/* Tagihan Info */}
-              <div className="pt-4" style={{ borderTop: '1px solid rgba(218, 165, 32, 0.2)' }}>
-                <h4 className="font-medium mb-3 flex items-center gap-2" style={{ fontFamily: 'Cinzel, serif', color: '#DAA520' }}>
-                  <Scroll size={18} />
-                  Riwayat Kewajiban
-                </h4>
-                <WargaTagihanList wargaId={selectedWarga.id} nama={selectedWarga.nama} />
               </div>
             </div>
             <div className="p-4" style={{ backgroundColor: 'rgba(0,0,0,0.2)', borderTop: '1px solid rgba(218, 165, 32, 0.2)' }}>
@@ -294,67 +299,6 @@ export default function DaftarWarga() {
             </div>
           </div>
         </div>
-      )}
-    </div>
-  );
-}
-
-// Component untuk menampilkan tagihan warga di modal
-function WargaTagihanList({ wargaId }) {
-  const { tagihan } = useApp();
-  const wargaTagihan = tagihan.filter(t => t.idWarga === wargaId);
-  const recentTagihan = wargaTagihan.slice(-5).reverse();
-
-  const formatCurrency = (num) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(num);
-  };
-
-  const getStatusBadge = (status) => {
-    const styles = {
-      lunas: { bg: 'rgba(34, 197, 94, 0.2)', color: '#4ADE80', border: '1px solid #22c55e' },
-      belum_bayar: { bg: 'rgba(234, 179, 8, 0.2)', color: '#FACC15', border: '1px solid #eab308' },
-      terlambat: { bg: 'rgba(220, 38, 38, 0.2)', color: '#F87171', border: '1px solid #ef4444' },
-    };
-    const labels = {
-      lunas: 'Lunas',
-      belum_bayar: 'Belum',
-      terlambat: 'Telat',
-    };
-    return (
-      <span
-        className="px-2 py-0.5 rounded text-xs font-medium"
-        style={{ backgroundColor: styles[status].bg, color: styles[status].color, border: styles[status].border }}
-      >
-        {labels[status]}
-      </span>
-    );
-  };
-
-  return (
-    <div className="space-y-2">
-      {recentTagihan.length > 0 ? (
-        recentTagihan.map((t) => (
-          <div
-            key={t.id}
-            className="flex items-center justify-between p-2 rounded-lg"
-            style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
-          >
-            <div>
-              <p className="text-sm font-medium" style={{ color: '#F5DEB3' }}>{t.jenis}</p>
-              <p className="text-xs" style={{ color: '#F5DEB3', opacity: 0.6 }}>{t.bulan}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-medium" style={{ color: '#DAA520' }}>{formatCurrency(t.jumlah)}</p>
-              {getStatusBadge(t.status)}
-            </div>
-          </div>
-        ))
-      ) : (
-        <p className="text-sm text-center py-2" style={{ color: '#F5DEB3', opacity: 0.5 }}>Belum ada kewajiban</p>
       )}
     </div>
   );

@@ -1,5 +1,4 @@
 // Prisma schema for Iuran RT App
-// Learn more: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
@@ -13,14 +12,13 @@ datasource db {
 // Model Warga (Kepala Keluarga)
 model Warga {
   id           String    @id @default(cuid())
-  nama         String    @db.VarChar(100)
-  nik          String    @unique @db.VarChar(20)
-  alamat       String    @db.VarChar(100)
-  telepon      String?   @db.VarChar(20)
-  status       String    @default("aktif") // aktif, non-aktif
+  nama         String
+  nik          String    @unique
+  alamat       String
+  telepon      String?
+  status       String    @default("aktif")
   tanggalMasuk DateTime  @default(now())
 
-  // Relasi
   tagihan      Tagihan[]
 
   createdAt    DateTime  @default(now())
@@ -31,21 +29,20 @@ model Warga {
 
 // Model Tagihan
 model Tagihan {
-  id                  String    @id @default(cuid())
-  idWarga             String
-  jenis               String    // "Uang Sampah", "Uang Keamanan"
-  jumlah              Int                   // dalam Rupiah
-  bulan               String    @db.VarChar(20) // "Juni 2026"
-  tanggalJatuhTempo   DateTime
-  status              String    @default("belum_bayar") // lunas, belum_bayar, terlambat
-  tanggalBayar        DateTime?
-  metodeBayar         String?   // Transfer Bank, E-Wallet, Tunai
+  id                String    @id @default(cuid())
+  idWarga           String
+  jenis             String
+  jumlah            Int
+  bulan             String
+  tanggalJatuhTempo DateTime
+  status            String    @default("belum_bayar")
+  tanggalBayar      DateTime?
+  metodeBayar       String?
 
-  // Relasi
-  warga               Warga     @relation(fields: [idWarga], references: [id])
+  warga             Warga     @relation(fields: [idWarga], references: [id])
 
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@index([idWarga])
   @@index([status])
@@ -55,32 +52,32 @@ model Tagihan {
 
 // Model Transaksi
 model Transaksi {
-  id            String    @id @default(cuid())
-  idWarga       String?
-  namaWarga     String?   @db.VarChar(100)
-  jenis         String                   // "Pemasukan", "Pengeluaran"
-  kategori      String    @db.VarChar(50) // "Uang Sampah", "Uang Keamanan", "Kebersihan", "Keamanan", dll
-  jumlah        Int                   // dalam Rupiah
-  tanggal       DateTime
-  keterangan    String?   @db.VarChar(255)
-  metodeBayar   String?
+  id          String    @id @default(cuid())
+  idWarga     String?
+  namaWarga   String?
+  jenis       String
+  kategori    String
+  jumlah      Int
+  tanggal     DateTime
+  keterangan  String?
+  metodeBayar String?
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([jenis])
   @@index([tanggal])
   @@map("transaksi")
 }
 
-// Model User (untuk login)
+// Model User
 model User {
-  id        String   @id @default(cuid())
-  nama      String   @db.VarChar(100)
-  email     String   @unique
-  password  String   // hashed
-  role      String   @default("user") // admin, user
-  idWarga   String?  // kalau user, link ke warga
+  id       String   @id @default(cuid())
+  nama     String
+  email    String   @unique
+  password String
+  role     String   @default("user")
+  idWarga  String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -88,15 +85,15 @@ model User {
   @@map("users")
 }
 
-// Model Konfigurasi (untuk settings umum)
+// Model Konfigurasi
 model Konfigurasi {
-  id            String   @id @default(cuid())
-  namaRt        String   @default("RT 03")
-  iuranSampah  Int      @default(50000)
-  iuranKeamanan Int     @default(10000)
+  id             String   @id @default(cuid())
+  namaRt         String   @default("RT 03")
+  iuranSampah    Int      @default(50000)
+  iuranKeamanan Int      @default(10000)
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@map("konfigurasi")
 }

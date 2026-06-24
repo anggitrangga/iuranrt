@@ -1,16 +1,30 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, Download, RefreshCw, Crown, Scroll } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { apiGetLaporan } from '../api/index';
 import Header from '../components/Header';
 
 export default function LaporanKeuangan() {
-  const { transaksi, getStatistikRealtime } = useApp();
-  const [bulanFilter, setBulanFilter] = useState('semua');
-  const [jenisFilter, setJenisFilter] = useState('semua');
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
-  const stats = getStatistikRealtime();
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const result = await apiGetLaporan();
+      setData(result);
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Error fetching laporan:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const formatCurrency = (num) => {
     return new Intl.NumberFormat('id-ID', {
@@ -19,61 +33,6 @@ export default function LaporanKeuangan() {
       minimumFractionDigits: 0,
     }).format(num);
   };
-
-  // Filter transaksi
-  const filteredTransaksi = transaksi.filter(t => {
-    const matchesBulan = bulanFilter === 'semua' || t.tanggal.startsWith(bulanFilter);
-    const matchesJenis = jenisFilter === 'semua' || t.jenis === jenisFilter;
-    return matchesBulan && matchesJenis;
-  });
-
-  // Sort by date descending
-  const sortedTransaksi = [...filteredTransaksi].sort((a, b) => {
-    return new Date(b.tanggal) - new Date(a.tanggal);
-  });
-
-  // Data untuk Pie Chart - Pengeluaran per Kategori
-  const pengeluaranData = useMemo(() => {
-    const kategoriMap = {};
-    transaksi
-      .filter(t => t.jenis === 'Pengeluaran')
-      .forEach(t => {
-        kategoriMap[t.kategori] = (kategoriMap[t.kategori] || 0) + t.jumlah;
-      });
-    return Object.entries(kategoriMap).map(([name, value]) => ({ name, value }));
-  }, [transaksi]);
-
-  // Data untuk Line Chart - Trend per Bulan
-  const trendData = useMemo(() => {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'];
-    return months.map((month, index) => {
-      const monthNum = (index + 1).toString().padStart(2, '0');
-      const year = '2026';
-      const prefix = `${year}-${monthNum}`;
-
-      const pemasukan = transaksi
-        .filter(t => t.jenis === 'Pemasukan' && t.tanggal.startsWith(prefix))
-        .reduce((sum, t) => sum + t.jumlah, 0);
-
-      const pengeluaran = transaksi
-        .filter(t => t.jenis === 'Pengeluaran' && t.tanggal.startsWith(prefix))
-        .reduce((sum, t) => sum + t.jumlah, 0);
-
-      return { name: month, pemasukan, pengeluaran };
-    });
-  }, [transaksi]);
-
-  // Data untuk Bar Chart - Perbandingan per Jenis Iuran
-  const iuranData = useMemo(() => {
-    const jenisMap = {};
-    transaksi
-      .filter(t => t.jenis === 'Pemasukan')
-      .forEach(t => {
-        const jenis = t.kategori || 'Lainnya';
-        jenisMap[jenis] = (jenisMap[jenis] || 0) + t.jumlah;
-      });
-    return Object.entries(jenisMap).map(([name, value]) => ({ name, value }));
-  }, [transaksi]);
 
   // Wayang theme colors
   const COLORS = ['#DAA520', '#FACC15', '#F87171', '#8B6914', '#22c55e'];
@@ -102,8 +61,25 @@ export default function LaporanKeuangan() {
     return null;
   };
 
-  const handleRefresh = () => {
-    setLastUpdate(new Date());
+  if (loading) {
+    return (
+      <div className="flex-1 flex flex-col">
+        <Header title="Laporan Keuangan" />
+        <div className="flex-1 p-4 lg:p-8 flex items-center justify-center" style={{ background: '#1A0F0A', minHeight: '100%' }}>
+          <div className="text-center">
+            <RefreshCw size={48} className="animate-spin mx-auto mb-4" style={{ color: '#DAA520' }} />
+            <p style={{ color: '#DAA520' }}>Memuat laporan...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const stats = data?.stats || {
+    saldo: 0,
+    totalPemasukanBulanIni: 0,
+    totalPengeluaranBulanIni: 0,
+    saldoBersih: 0
   };
 
   return (
@@ -117,7 +93,7 @@ export default function LaporanKeuangan() {
             <RefreshCw size={16} className="animate-spin-slow" />
             <span>Update: {lastUpdate.toLocaleTimeString('id-ID')}</span>
             <button
-              onClick={handleRefresh}
+              onClick={fetchData}
               className="p-1 rounded transition-all hover:bg-white/10"
               title="Refresh Data"
               style={{ color: '#DAA520' }}
@@ -125,48 +101,17 @@ export default function LaporanKeuangan() {
               <RefreshCw size={16} />
             </button>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <select
-              value={bulanFilter}
-              onChange={(e) => setBulanFilter(e.target.value)}
-              className="px-4 py-2 rounded-lg outline-none text-sm"
-              style={{
-                backgroundColor: 'rgba(0,0,0,0.3)',
-                border: '1px solid rgba(218, 165, 32, 0.2)',
-                color: '#F5DEB3'
-              }}
-            >
-              <option value="semua">Semua Bulan</option>
-              <option value="2026-06">Juni 2026</option>
-              <option value="2026-05">Mei 2026</option>
-              <option value="2026-04">April 2026</option>
-            </select>
-            <select
-              value={jenisFilter}
-              onChange={(e) => setJenisFilter(e.target.value)}
-              className="px-4 py-2 rounded-lg outline-none text-sm"
-              style={{
-                backgroundColor: 'rgba(0,0,0,0.3)',
-                border: '1px solid rgba(218, 165, 32, 0.2)',
-                color: '#F5DEB3'
-              }}
-            >
-              <option value="semua">Semua Jenis</option>
-              <option value="Pemasukan">Pemasukan</option>
-              <option value="Pengeluaran">Pengeluaran</option>
-            </select>
-            <button
-              className="px-4 py-2 rounded-lg flex items-center gap-2 text-sm transition-all"
-              style={{
-                backgroundColor: 'rgba(218, 165, 32, 0.2)',
-                color: '#DAA520',
-                border: '1px solid rgba(218, 165, 32, 0.3)'
-              }}
-            >
-              <Download size={16} />
-              Export PDF
-            </button>
-          </div>
+          <button
+            className="px-4 py-2 rounded-lg flex items-center gap-2 text-sm transition-all"
+            style={{
+              backgroundColor: 'rgba(218, 165, 32, 0.2)',
+              color: '#DAA520',
+              border: '1px solid rgba(218, 165, 32, 0.3)'
+            }}
+          >
+            <Download size={16} />
+            Export PDF
+          </button>
         </div>
 
         {/* Summary Cards - Wayang Style */}
@@ -245,7 +190,7 @@ export default function LaporanKeuangan() {
             className="rounded-xl p-5"
             style={{
               background: 'linear-gradient(145deg, #2D1B0E 0%, #1A0F0A 100%)',
-              border: stats.totalPemasukanBulanIni - stats.totalPengeluaranBulanIni >= 0
+              border: stats.saldoBersih >= 0
                 ? '1px solid rgba(34, 197, 94, 0.3)'
                 : '1px solid rgba(220, 38, 38, 0.3)'
             }}
@@ -257,21 +202,21 @@ export default function LaporanKeuangan() {
                   className="text-2xl font-bold"
                   style={{
                     fontFamily: 'Cinzel, serif',
-                    color: stats.totalPemasukanBulanIni - stats.totalPengeluaranBulanIni >= 0 ? '#4ADE80' : '#F87171'
+                    color: stats.saldoBersih >= 0 ? '#4ADE80' : '#F87171'
                   }}
                 >
-                  {formatCurrency(stats.totalPemasukanBulanIni - stats.totalPengeluaranBulanIni)}
+                  {formatCurrency(stats.saldoBersih)}
                 </p>
               </div>
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center"
                 style={{
-                  background: stats.totalPemasukanBulanIni - stats.totalPengeluaranBulanIni >= 0
+                  background: stats.saldoBersih >= 0
                     ? 'rgba(34, 197, 94, 0.2)'
                     : 'rgba(220, 38, 38, 0.2)'
                 }}
               >
-                {stats.totalPemasukanBulanIni - stats.totalPengeluaranBulanIni >= 0 ? (
+                {stats.saldoBersih >= 0 ? (
                   <TrendingUp size={24} style={{ color: '#4ADE80' }} />
                 ) : (
                   <TrendingDown size={24} style={{ color: '#F87171' }} />
@@ -297,7 +242,7 @@ export default function LaporanKeuangan() {
             </h3>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData}>
+                <LineChart data={data?.trendData || []}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(218, 165, 32, 0.1)" />
                   <XAxis dataKey="name" stroke="#F5DEB3" fontSize={12} style={{ fontFamily: 'Cinzel, serif' }} />
                   <YAxis stroke="#F5DEB3" fontSize={12} tickFormatter={(value) => `${value / 1000}K`} style={{ fontFamily: 'Cinzel, serif' }} />
@@ -329,7 +274,7 @@ export default function LaporanKeuangan() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={pengeluaranData}
+                    data={data?.pieData || []}
                     cx="50%"
                     cy="50%"
                     innerRadius={50}
@@ -339,7 +284,7 @@ export default function LaporanKeuangan() {
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                     labelLine={false}
                   >
-                    {pengeluaranData.map((entry, index) => (
+                    {(data?.pieData || []).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(218, 165, 32, 0.3)" />
                     ))}
                   </Pie>
@@ -368,7 +313,7 @@ export default function LaporanKeuangan() {
           </h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={iuranData}>
+              <BarChart data={data?.barData || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(218, 165, 32, 0.1)" />
                 <XAxis dataKey="name" stroke="#F5DEB3" fontSize={12} style={{ fontFamily: 'Cinzel, serif' }} />
                 <YAxis stroke="#F5DEB3" fontSize={12} tickFormatter={(value) => `${value / 1000}K`} style={{ fontFamily: 'Cinzel, serif' }} />
@@ -405,7 +350,7 @@ export default function LaporanKeuangan() {
                 </tr>
               </thead>
               <tbody>
-                {sortedTransaksi.map((t) => (
+                {(data?.transaksi || []).map((t) => (
                   <tr
                     key={t.id}
                     style={{ borderBottom: '1px solid rgba(218, 165, 32, 0.1)' }}
@@ -441,7 +386,7 @@ export default function LaporanKeuangan() {
               </tbody>
             </table>
           </div>
-          {sortedTransaksi.length === 0 && (
+          {(data?.transaksi || []).length === 0 && (
             <div className="py-12 text-center">
               <Scroll size={48} style={{ color: '#DAA520', opacity: 0.3, margin: '0 auto 16px' }} />
               <p style={{ color: '#F5DEB3', opacity: 0.5 }}>Tidak ada transaksi yang ditemukan</p>

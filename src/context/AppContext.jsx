@@ -1,93 +1,97 @@
-import { createContext, useContext, useState, useCallback } from 'react';
-import { wargaData, tagihanData, transaksiData, statistikData, currentUser } from '../data/mockData';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { apiDashboard, apiGetWarga, apiGetTagihan, apiBayarTagihan, apiGetLaporan } from '../api/index';
 
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
-  const [warga, setWarga] = useState(wargaData);
-  const [tagihan, setTagihan] = useState(tagihanData);
-  const [transaksi, setTransaksi] = useState(transaksiData);
-  const [statistik, setStatistik] = useState(statistikData);
-  const [user] = useState(currentUser);
+  const [warga, setWarga] = useState([]);
+  const [tagihan, setTagihan] = useState([]);
+  const [statistik, setStatistik] = useState({
+    totalWarga: 0,
+    wargaAktif: 0,
+    wargaNonAktif: 0,
+    tagihanBulanIni: 0,
+    tagihanLunas: 0,
+    tagihanBelumBayar: 0,
+    tagihanTerlambat: 0,
+    totalPemasukanBulanIni: 0,
+    totalPengeluaranBulanIni: 0,
+    saldo: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Bayar tagihan
-  const bayarTagihan = useCallback((idTagihan, metodeBayar) => {
-    setTagihan(prev => prev.map(t =>
-      t.id === idTagihan
-        ? { ...t, status: 'lunas', tanggalBayar: new Date().toISOString().split('T')[0], metodeBayar }
-        : t
-    ));
+  // Current user (mock - in production, get from auth)
+  const user = {
+    id: '1',
+    nama: 'Budi Santoso',
+    email: 'budi@email.com',
+    role: 'user',
+  };
 
-    // Update statistik
-    setStatistik(prev => ({
-      ...prev,
-      tagihanLunas: prev.tagihanLunas + 1,
-      tagihanBelumBayar: prev.tagihanBelumBayar - 1,
-    }));
+  // Fetch all data
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [dashboard, wargaData, tagihanData] = await Promise.all([
+        apiDashboard(),
+        apiGetWarga(),
+        apiGetTagihan(),
+      ]);
+
+      setStatistik(dashboard);
+      setWarga(wargaData);
+      setTagihan(tagihanData);
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // Get tagihan untuk user saat ini
+  // Initial fetch
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Bayar tagihan
+  const bayarTagihan = useCallback(async (idTagihan, metodeBayar) => {
+    try {
+      await apiBayarTagihan({ id: idTagihan, metodeBayar });
+      // Refresh data
+      await fetchData();
+      return { success: true };
+    } catch (err) {
+      console.error('Bayar error:', err);
+      return { success: false, error: err.message };
+    }
+  }, [fetchData]);
+
+  // Get tagihan untuk user saat ini (by nama)
   const getTagihanUser = useCallback((userId) => {
-    return tagihan.filter(t => t.idWarga === userId);
-  }, [tagihan]);
-
-  // Get tagihan berdasarkan status
-  const getTagihanByStatus = useCallback((status) => {
-    return tagihan.filter(t => t.status === status);
-  }, [tagihan]);
-
-  // Get warga berdasarkan status
-  const getWargaByStatus = useCallback((status) => {
-    return warga.filter(w => w.status === status);
-  }, [warga]);
+    // In production, match by userId/idWarga
+    // For now, show all tagihan that match user's name
+    return tagihan.filter(t => t.namaWarga === user?.nama);
+  }, [tagihan, user?.nama]);
 
   // Get statistik real-time
   const getStatistikRealtime = useCallback(() => {
-    const now = new Date();
-    const bulanIni = now.toLocaleString('id-ID', { month: 'long', year: 'numeric' });
-
-    const tagihanBulanIni = tagihan.filter(t => t.bulan === bulanIni);
-    const lunas = tagihanBulanIni.filter(t => t.status === 'lunas').length;
-    const belumBayar = tagihanBulanIni.filter(t => t.status === 'belum_bayar').length;
-    const terlambat = tagihanBulanIni.filter(t => t.status === 'terlambat').length;
-
-    const transaksiBulanIni = transaksi.filter(t => {
-      const tanggal = new Date(t.tanggal);
-      return tanggal.getMonth() === now.getMonth() && tanggal.getFullYear() === now.getFullYear();
-    });
-
-    const totalPemasukan = transaksiBulanIni
-      .filter(t => t.jenis === 'Pemasukan')
-      .reduce((sum, t) => sum + t.jumlah, 0);
-
-    const totalPengeluaran = transaksiBulanIni
-      .filter(t => t.jenis === 'Pengeluaran')
-      .reduce((sum, t) => sum + t.jumlah, 0);
-
-    return {
-      totalWarga: warga.length,
-      wargaAktif: warga.filter(w => w.status === 'aktif').length,
-      wargaNonAktif: warga.filter(w => w.status === 'non-aktif').length,
-      tagihanBulanIni: tagihanBulanIni.length,
-      tagihanLunas: lunas,
-      tagihanBelumBayar: belumBayar,
-      tagihanTerlambat: terlambat,
-      totalPemasukanBulanIni: totalPemasukan,
-      totalPengeluaranBulanIni: totalPengeluaran,
-      saldo: statistik.saldo + totalPemasukan - totalPengeluaran,
-    };
-  }, [warga, tagihan, transaksi, statistik.saldo]);
+    return statistik;
+  }, [statistik]);
 
   const value = {
     warga,
     tagihan,
-    transaksi,
     statistik,
     user,
+    loading,
+    error,
+    fetchData,
     bayarTagihan,
     getTagihanUser,
-    getTagihanByStatus,
-    getWargaByStatus,
     getStatistikRealtime,
   };
 

@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Search, Download, Eye, ScrollText } from 'lucide-react';
+import { Search, Download, Eye, ScrollText, RefreshCw } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Header from '../components/Header';
 
 export default function DaftarTagihan() {
-  const { tagihan } = useApp();
+  const { tagihan, loading, fetchData } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('semua');
   const [jenisFilter, setJenisFilter] = useState('semua');
@@ -12,9 +12,9 @@ export default function DaftarTagihan() {
 
   // Filter tagihan
   const filteredTagihan = tagihan.filter(t => {
-    const matchesSearch = t.namaWarga.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.jenis.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.bulan.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = t.namaWarga?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.jenis?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.bulan?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'semua' || t.status === statusFilter;
     const matchesJenis = jenisFilter === 'semua' || t.jenis === jenisFilter;
     return matchesSearch && matchesStatus && matchesJenis;
@@ -47,9 +47,9 @@ export default function DaftarTagihan() {
     return (
       <span
         className="px-2 py-1 rounded-full text-xs font-medium"
-        style={{ backgroundColor: styles[status].bg, color: styles[status].color, border: styles[status].border }}
+        style={{ backgroundColor: styles[status]?.bg, color: styles[status]?.color, border: styles[status]?.border }}
       >
-        {labels[status]}
+        {labels[status] || status}
       </span>
     );
   };
@@ -62,14 +62,23 @@ export default function DaftarTagihan() {
     terlambat: tagihan.filter(t => t.status === 'terlambat').length,
   };
 
-  const getAlamat = (idWarga) => {
-    const alamatMap = {
-      1: 'Blok A1 No. 1', 2: 'Blok A1 No. 2', 3: 'Blok A1 No. 3',
-      4: 'Blok B2 No. 1', 5: 'Blok B2 No. 2', 6: 'Blok B2 No. 3',
-      7: 'Blok C3 No. 1', 8: 'Blok C3 No. 2'
-    };
-    return alamatMap[idWarga] || '-';
+  const getAlamat = (tagihan) => {
+    return tagihan.alamat || '-';
   };
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex flex-col">
+        <Header title="Daftar Tagihan" />
+        <div className="flex-1 p-4 lg:p-8 flex items-center justify-center" style={{ background: '#1A0F0A', minHeight: '100%' }}>
+          <div className="text-center">
+            <RefreshCw size={48} className="animate-spin mx-auto mb-4" style={{ color: '#DAA520' }} />
+            <p style={{ color: '#DAA520' }}>Memuat tagihan...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col">
@@ -226,7 +235,7 @@ export default function DaftarTagihan() {
                   >
                     <td className="py-4 px-4 text-sm" style={{ color: '#F5DEB3', opacity: 0.6 }}>{index + 1}</td>
                     <td className="py-4 px-4 text-sm font-medium" style={{ color: '#F5DEB3' }}>{t.namaWarga}</td>
-                    <td className="py-4 px-4 text-sm" style={{ color: '#F5DEB3', opacity: 0.7 }}>{getAlamat(t.idWarga)}</td>
+                    <td className="py-4 px-4 text-sm" style={{ color: '#F5DEB3', opacity: 0.7 }}>{getAlamat(t)}</td>
                     <td className="py-4 px-4 text-sm" style={{ color: '#F5DEB3', opacity: 0.7 }}>{t.jenis}</td>
                     <td className="py-4 px-4 text-sm" style={{ color: '#F5DEB3', opacity: 0.7 }}>{t.bulan}</td>
                     <td className="py-4 px-4 text-sm font-semibold text-right" style={{ color: '#DAA520' }}>
@@ -295,7 +304,7 @@ export default function DaftarTagihan() {
                 </div>
                 <div>
                   <p className="text-sm" style={{ color: '#F5DEB3', opacity: 0.6 }}>Alamat</p>
-                  <p className="font-medium" style={{ color: '#F5DEB3' }}>{getAlamat(selectedTagihan.idWarga)}</p>
+                  <p className="font-medium" style={{ color: '#F5DEB3' }}>{getAlamat(selectedTagihan)}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -334,12 +343,12 @@ export default function DaftarTagihan() {
                   <div>
                     <p className="text-sm" style={{ color: '#F5DEB3', opacity: 0.6 }}>Tanggal Bayar</p>
                     <p className="font-medium" style={{ color: '#4ADE80' }}>
-                      {new Date(selectedTagihan.tanggalBayar).toLocaleDateString('id-ID')}
+                      {selectedTagihan.tanggalBayar ? new Date(selectedTagihan.tanggalBayar).toLocaleDateString('id-ID') : '-'}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm" style={{ color: '#F5DEB3', opacity: 0.6 }}>Metode Bayar</p>
-                    <p className="font-medium" style={{ color: '#4ADE80' }}>{selectedTagihan.metodeBayar}</p>
+                    <p className="font-medium" style={{ color: '#4ADE80' }}>{selectedTagihan.metodeBayar || '-'}</p>
                   </div>
                 </div>
               )}

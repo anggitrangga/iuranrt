@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Iuran RT - Aplikasi Manajemen Iuran</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        content: [
+          "./index.html",
+          "./src/**/*.{js,ts,jsx,tsx}",
+        ],
+        theme: {
+          extend: {
+            colors: {
+              // Wayang/Mahabharata inspired colors
+              gold: {
+                50: '#fefce8',
+                100: '#fef9c3',
+                200: '#fef08a',
+                300: '#fde047',
+                400: '#facc15',
+                500: '#DAA520', // Golden Rod
+                600: '#B8860B', // Dark Goldenrod
+                700: '#8B6914',
+                800: '#6B4F12',
+                900: '#4A360D',
+              },
+              mahabharata: {
+                // Deep earth tones inspired by wayang kulit
+                kulit: '#2D1B0E',      // Dark brown (shadow puppet leather)
+                coklat: '#5C3D2E',     // Brown
+                coklatMuda: '#8B5A2B', // Light brown
+                merah: '#8B0000',       // Dark red (Arjuna's signature)
+                krem: '#F5DEB3',        // Wheat/cream
+                hitam: '#1A0F0A',      // Almost black
+                gold: '#DAA520',        // Golden
+                perak: '#C0C0C0',       // Silver
+              }
+            },
+            fontFamily: {
+              wayang: ['Cinzel', 'serif'], // Regal font for headings
+              body: ['Inter', 'system-ui', 'sans-serif'],
+            },
+            backgroundImage: {
+              'wayang-pattern': "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23DAA520' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
+              'arjuna-gradient': 'linear-gradient(135deg, #2D1B0E 0%, #5C3D2E 50%, #8B0000 100%)',
+            }
+          },
+        },
+        plugins: [],
+      }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

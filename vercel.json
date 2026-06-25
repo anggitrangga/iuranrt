@@ -1,47 +1,6 @@
 {
-  "version": 2,
-  "buildCommand": "npx prisma generate && npm run build",
-  "installCommand": "npm install",
-  "framework": null,
-  "builds": [
-    {
-      "src": "api/**/*.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "dist" }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/dashboard",
-      "dest": "/api/dashboard.js"
-    },
-    {
-      "src": "/api/warga",
-      "dest": "/api/warga.js"
-    },
-    {
-      "src": "/api/tagihan",
-      "dest": "/api/tagihan.js"
-    },
-    {
-      "src": "/api/bayar",
-      "dest": "/api/bayar.js"
-    },
-    {
-      "src": "/api/transaksi",
-      "dest": "/api/transaksi.js"
-    },
-    {
-      "src": "/api/laporan",
-      "dest": "/api/laporan.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/dist/$1" }
   ]
 }

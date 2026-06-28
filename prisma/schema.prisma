@@ -9,6 +9,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Model User (Admin, Bendahara, Warga)
+model User {
+  id        String   @id @default(cuid())
+  nama      String
+  email     String   @unique
+  password  String
+  role      String   @default("warga") // admin, bendahara, warga
+  idWarga   String?  // link ke warga (kalau role=warga)
+  aktif    Boolean  @default(true)
+
+  warga     Warga?   @relation(fields: [idWarga], references: [id])
+  @@unique([idWarga])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
 // Model Warga (Kepala Keluarga)
 model Warga {
   id           String    @id @default(cuid())
@@ -20,6 +39,7 @@ model Warga {
   tanggalMasuk DateTime  @default(now())
 
   tagihan      Tagihan[]
+  user         User?
 
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -31,13 +51,14 @@ model Warga {
 model Tagihan {
   id                String    @id @default(cuid())
   idWarga           String
-  jenis             String
+  jenis             String    // "Uang Sampah", "Uang Keamanan"
   jumlah            Int
   bulan             String
   tanggalJatuhTempo DateTime
-  status            String    @default("belum_bayar")
+  status            String    @default("belum_bayar") // lunas, belum_bayar, terlambat
   tanggalBayar      DateTime?
   metodeBayar       String?
+  keterangan        String?
 
   warga             Warga     @relation(fields: [idWarga], references: [id])
 
@@ -55,12 +76,13 @@ model Transaksi {
   id          String    @id @default(cuid())
   idWarga     String?
   namaWarga   String?
-  jenis       String
+  jenis       String    // "Pemasukan", "Pengeluaran"
   kategori    String
   jumlah      Int
   tanggal     DateTime
   keterangan  String?
   metodeBayar String?
+  inputBy     String?   // user_id yang input
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -70,30 +92,17 @@ model Transaksi {
   @@map("transaksi")
 }
 
-// Model User
-model User {
-  id       String   @id @default(cuid())
-  nama     String
-  email    String   @unique
-  password String
-  role     String   @default("user")
-  idWarga  String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("users")
-}
-
 // Model Konfigurasi
 model Konfigurasi {
-  id             String   @id @default(cuid())
-  namaRt         String   @default("RT 03")
-  iuranSampah    Int      @default(50000)
-  iuranKeamanan Int      @default(10000)
+  id              String   @id @default(cuid())
+  namaRt          String   @default("RT 03")
+  alamatRt        String?
+  iuranSampah     Int      @default(50000)
+  iuranKeamanan   Int      @default(10000)
+  batasPembayaran Int      @default(15) // tanggal 15 setiap bulan
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@map("konfigurasi")
 }
